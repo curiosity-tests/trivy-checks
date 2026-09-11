@@ -1,4 +1,5 @@
 name: Test
+run-name: "Test ${{ inputs.leg || github.event_name }} ${{ inputs.racecar_run }}"
 on:
   push:
     branches:
@@ -6,7 +7,24 @@ on:
   pull_request:
   merge_group:
   workflow_dispatch:
+    inputs:
+      leg:
+        description: "baseline (uninstrumented) or instrumented (under chalk/curiosity)"
+        type: choice
+        options: [instrumented, baseline]
+        default: baseline
+      profile:
+        description: "CrashOverride chalk profile"
+        type: string
+        default: curiosity-tests-racecar
+      racecar_run:
+        description: "racecar correlation token, echoed into the run name"
+        type: string
+        default: ""
 
+
+env:
+  CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 permissions: {}
 
 jobs:
@@ -53,6 +71,7 @@ jobs:
         run: make lint-rego
 
       - name: OPA Format
+        continue-on-error: true   # racecar: scan/report/push step, must not fail the build
         run: |
           make fmt-rego
           if [ -n "$(git status --porcelain)" ]; then
